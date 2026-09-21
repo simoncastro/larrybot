@@ -119,24 +119,16 @@ async def main():
     try:
         await bot.start(TOKEN)
     finally:
-        print("Fermeture du bot, quitte discord")
-        print("A - avant clear")
         bot.player.clear_voice_client()
 
-        print("B - avant cancel")
         bot.audio_task.cancel()
 
-        print("C - après cancel")
         try:
             await bot.audio_task
         except asyncio.CancelledError:
             pass
 
-        print("D - audio task terminée")
-
         await bot.close()
-
-        print("E - bot close terminé")
 
 
 if __name__ == "__main__":
