@@ -62,7 +62,8 @@ class Controls(commands.Cog):
                 await voice_client.move_to(channel)
 
         try:
-            await self.bot.player.add_song(voice_client, url, ctx.author)
+            self.bot.player.set_voice_client(voice_client)
+            await self.bot.player.add_song(url, ctx.author.name)
         except Exception as error:
             print(error)
             await ctx.send("Couldn't load that URL.")
@@ -85,11 +86,58 @@ class Controls(commands.Cog):
             return
 
         await ctx.voice_client.disconnect()
+        self.bot.player.clear_voice_client()
         await ctx.send("Disconnected.")
+
+    @commands.command()
+    async def resume(self, ctx):
+        if ctx.voice_client is None:
+            # User must be in a voice channel
+            if not ctx.author.voice:
+                await ctx.send("You need to be in a voice channel.")
+                return
+
+        channel = ctx.author.voice.channel
+
+        # Connect or move LarryBot to the user's voice channel
+        if ctx.voice_client is None:
+            voice_client = await channel.connect()
+        else:
+            voice_client = ctx.voice_client
+
+            if voice_client.channel != channel:
+                await voice_client.move_to(channel)
+
+        self.bot.player.set_voice_client(voice_client)
+
 
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN is missing from .env")
 
-bot = LarryBot()
+async def main():
+    bot = LarryBot()
+    try:
+        await bot.start(TOKEN)
+    finally:
+        print("Fermeture du bot, quitte discord")
+        print("A - avant clear")
+        bot.player.clear_voice_client()
 
-bot.run(TOKEN)
+        print("B - avant cancel")
+        bot.audio_task.cancel()
+
+        print("C - après cancel")
+        try:
+            await bot.audio_task
+        except asyncio.CancelledError:
+            pass
+
+        print("D - audio task terminée")
+
+        await bot.close()
+
+        print("E - bot close terminé")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
