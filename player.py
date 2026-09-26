@@ -10,8 +10,7 @@ YDL_OPTIONS = {
     "format": "bestaudio/best",
     "quiet": True,
     "noplaylist": False,
-    # sans ça on se fait traiter de bot
-    "cookiesfrombrowser": ("firefox",),
+    "cookiefile": "cookies.txt",
 }
 
 FFMPEG_OPTIONS = {
