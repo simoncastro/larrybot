@@ -1,6 +1,7 @@
 import asyncio
 import yt_dlp
 import discord
+import sys
 from dataclasses import asdict, dataclass
 from storage import save_queue, load_queue_from_save
 
@@ -66,9 +67,12 @@ class Player():
         info = await self.extract_song_data(song.url)
         audio_url = info["url"]
 
+        # Fresh Googlevideo URLs may temporarily return 403 to FFmpeg
+        await asyncio.sleep(3)
+
         source = discord.FFmpegPCMAudio(
             audio_url,
-            stderr=None,
+            stderr=sys.stderr,
             **FFMPEG_OPTIONS
         )
 
@@ -80,6 +84,7 @@ class Player():
                 fut.set_result(None)
 
         def after_playing(error):
+            print("AFTER PLAYING:", error)
             loop.call_soon_threadsafe(resolve_future)
 
         self.voice_client.play(
