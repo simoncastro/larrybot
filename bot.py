@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from player import Player
-from queue import QueueManager
+from queue_manager import QueueManager
 from worker import Worker
 
 load_dotenv()
