@@ -5,6 +5,8 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from player import Player
+from queue import QueueManager
+from worker import Worker
 
 load_dotenv()
 
@@ -17,11 +19,16 @@ class LarryBot(commands.Bot):
 
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
+        self.queue_manager = QueueManager()
         self.player = Player()
+        self.worker = Worker(
+            queue_manager=self.queue_manager,
+            player=self.player
+        )
 
     async def setup_hook(self):
         self.audio_task = asyncio.create_task(
-            self.player.worker()
+            self.worker.play_songs()
         )
 
         await self.add_cog(Controls(self))
@@ -42,8 +49,7 @@ class Controls(commands.Cog):
         else:
             return True
 
-    @commands.command()
-    async def play(self, ctx, url):
+    async def prepare_to_play(self, ctx):
         if ctx.voice_client is None:
             # User must be in a voice channel
             if not ctx.author.voice:
@@ -61,9 +67,33 @@ class Controls(commands.Cog):
             if voice_client.channel != channel:
                 await voice_client.move_to(channel)
 
+        return voice_client
+
+
+    @commands.command()
+    async def play(self, ctx, url):
+        voice_client = await self.prepare_to_play(ctx)
+
+        if voice_client is None:
+            return
+
         try:
-            self.bot.player.set_voice_client(voice_client)
-            await self.bot.player.add_song(url, ctx.author.name)
+            self.bot.worker.set_voice_client(voice_client)
+            await self.bot.queue_manager.add_song(url, ctx.author.name)
+        except Exception as error:
+            print(error)
+            await ctx.send("Couldn't load that URL.")
+
+    @commands.command()
+    async def playlist(self, ctx, url):
+        voice_client = await self.prepare_to_play(ctx)
+
+        if voice_client is None:
+            return
+
+        try:
+            self.bot.worker.set_voice_client(voice_client)
+            await self.bot.queue_manager.add_playlist(url, ctx.author.name)
         except Exception as error:
             print(error)
             await ctx.send("Couldn't load that URL.")
@@ -86,29 +116,17 @@ class Controls(commands.Cog):
             return
 
         await ctx.voice_client.disconnect()
-        self.bot.player.clear_voice_client()
+        self.bot.worker.clear_voice_client()
         await ctx.send("Disconnected.")
 
     @commands.command()
     async def resume(self, ctx):
-        if ctx.voice_client is None:
-            # User must be in a voice channel
-            if not ctx.author.voice:
-                await ctx.send("You need to be in a voice channel.")
-                return
+        voice_client = await self.prepare_to_play(ctx)
 
-        channel = ctx.author.voice.channel
+        if voice_client is None:
+            return
 
-        # Connect or move LarryBot to the user's voice channel
-        if ctx.voice_client is None:
-            voice_client = await channel.connect()
-        else:
-            voice_client = ctx.voice_client
-
-            if voice_client.channel != channel:
-                await voice_client.move_to(channel)
-
-        self.bot.player.set_voice_client(voice_client)
+        self.bot.worker.set_voice_client(voice_client)
 
 
 if not TOKEN:
@@ -119,7 +137,7 @@ async def main():
     try:
         await bot.start(TOKEN)
     finally:
-        bot.player.clear_voice_client()
+        bot.worker.clear_voice_client()
 
         bot.audio_task.cancel()
 

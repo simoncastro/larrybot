@@ -1,16 +1,14 @@
 import asyncio
-import yt_dlp
 import discord
 import sys
-from dataclasses import asdict, dataclass
-from storage import save_queue, load_queue_from_save
+import yt_dlp
 
 
 YDL_OPTIONS = {
-    "format": "bestaudio/best",
     "quiet": True,
-    "noplaylist": False,
+    "format": "bestaudio/best",
     "cookiefile": "cookies.txt",
+    "noplaylist": True,
 }
 
 FFMPEG_OPTIONS = {
@@ -18,57 +16,10 @@ FFMPEG_OPTIONS = {
     "options": "-vn",
 }
 
-@dataclass
-class Song():
-    url:str
-    title: str
-    requested_by: str
-
 class Player():
 
-    def __init__(self):
-        self.queue = asyncio.Queue()
-        self.load()
-        self.voice_client = None
-        self.voice_ready = asyncio.Event()
-
-    async def worker(self):
-        while True:
-            print("WORKER: waiting for voice")
-            await self.voice_ready.wait()
-
-            song = await self.next_song()
-            print("WORKER: got song:", song.title)
-
-            await self.play_song(song)
-
-    async def add_song(self, url, requested_by):
-        info = await self.extract_song_data(url)
-        
-        title = info.get("title", "Unknown title")
-
-        song = Song(
-            url= url, 
-            title= title, 
-            requested_by= requested_by)
-
-        await self.queue.put(song)
-
-        self.save()
-
-
-    async def next_song(self):
-        song = await self.queue.get()
-        self.save()
-
-        return song
-
-    async def play_song(self, song):
-        info = await self.extract_song_data(song.url)
-        audio_url = info["url"]
-
-        # Fresh Googlevideo URLs may temporarily return 403 to FFmpeg
-        await asyncio.sleep(3)
+    async def play_song(self, song, voice_client):
+        audio_url = await self.get_playable_url(song.url)
 
         source = discord.FFmpegPCMAudio(
             audio_url,
@@ -87,45 +38,19 @@ class Player():
             print("AFTER PLAYING:", error)
             loop.call_soon_threadsafe(resolve_future)
 
-        self.voice_client.play(
+        voice_client.play(
             source, 
             after= after_playing)
 
         await fut
 
-    def is_empty(self):
-        return self.queue.empty()
-
-    def save(self):
-        print("SAVE:", len(self.queue._queue), "songs")
-        queue_dict = [asdict(song) for song in self.queue._queue]
-        save_queue(queue_dict)
-
-    def load(self):
-        try:
-            song_dict = load_queue_from_save()
-            for song_data in song_dict:
-                self.queue.put_nowait(Song(**song_data))
-        except FileNotFoundError:
-            return
-
-    async def extract_song_data(self, url):
+    async def get_playable_url(self, url):
         def extract():
             with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
                 return ydl.extract_info(url, download=False)
-            
 
         loop = asyncio.get_running_loop()
         #yt-dlp is blocking, so don't run it directly on Discord's event loop
         info = await loop.run_in_executor(None, extract)
 
-
-        return info
-
-    def set_voice_client(self, voice_client):
-        self.voice_client = voice_client
-        self.voice_ready.set()
-
-    def clear_voice_client(self):
-        self.voice_client = None
-        self.voice_ready.clear()
+        return info.get("url")
