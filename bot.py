@@ -78,6 +78,7 @@ class Controls(commands.Cog):
             return
 
         try:
+            self.bot.worker.text_channel = ctx.channel
             self.bot.worker.set_voice_client(voice_client)
             await self.bot.queue_manager.add_song(url, ctx.author.name)
         except Exception as error:
@@ -92,6 +93,7 @@ class Controls(commands.Cog):
             return
 
         try:
+            self.bot.worker.text_channel = ctx.channel
             self.bot.worker.set_voice_client(voice_client)
             await self.bot.queue_manager.add_playlist(url, ctx.author.name)
         except Exception as error:
@@ -126,6 +128,7 @@ class Controls(commands.Cog):
         if voice_client is None:
             return
 
+        self.bot.worker.text_channel = ctx.channel
         self.bot.worker.set_voice_client(voice_client)
 
     @commands.command(help="Vide la queue")
