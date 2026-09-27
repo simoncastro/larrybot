@@ -74,7 +74,12 @@ class QueueManager():
         return song
 
     def clear_queue(self):
-        self.queue = asyncio.Queue()
+        while not self.queue.empty():
+            try:
+                self.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
         self.save()
 
     async def extract_data(self, url, type):
