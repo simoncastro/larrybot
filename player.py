@@ -1,5 +1,6 @@
 import asyncio
 import discord
+import sys
 import yt_dlp
 
 
@@ -22,7 +23,7 @@ class Player():
 
         source = discord.FFmpegPCMAudio(
             audio_url,
-            stderr=None,
+            stderr=sys.stderr,
             **FFMPEG_OPTIONS
         )
 
@@ -34,6 +35,7 @@ class Player():
                 fut.set_result(None)
 
         def after_playing(error):
+            print("AFTER PLAYING:", error)
             loop.call_soon_threadsafe(resolve_future)
 
         voice_client.play(
