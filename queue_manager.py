@@ -73,6 +73,10 @@ class QueueManager():
 
         return song
 
+    def clear_queue(self):
+        self.queue = asyncio.Queue()
+        self.save()
+
     async def extract_data(self, url, type):
         if type == Type.SONG:
             options = SONG_YDL_OPTIONS

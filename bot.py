@@ -70,7 +70,7 @@ class Controls(commands.Cog):
         return voice_client
 
 
-    @commands.command()
+    @commands.command(help="Joue le video ou l'ajoute à la fin de la queue s'il y a d'autres vidéos dedans")
     async def play(self, ctx, url):
         voice_client = await self.prepare_to_play(ctx)
 
@@ -84,7 +84,7 @@ class Controls(commands.Cog):
             print(error)
             await ctx.send("Couldn't load that URL.")
 
-    @commands.command()
+    @commands.command(help="Ajoute une liste de lecture, doit venir de la page principale de la liste, pas d'un des vidéos qui sont dedans")
     async def playlist(self, ctx, url):
         voice_client = await self.prepare_to_play(ctx)
 
@@ -99,7 +99,7 @@ class Controls(commands.Cog):
             await ctx.send("Couldn't load that URL.")
 
 
-    @commands.command()
+    @commands.command(help="Arrête la lecture, après resume la chanson en cours sera skip")
     async def stop(self, ctx):
         if not await self.is_in_channel(ctx):
             return
@@ -110,7 +110,7 @@ class Controls(commands.Cog):
         else:
             await ctx.send("There is no song that I could stop!")
 
-    @commands.command()
+    @commands.command(help="Larry quitte le channel")
     async def leave(self, ctx):
         if not await self.is_in_channel(ctx):
             return
@@ -119,7 +119,7 @@ class Controls(commands.Cog):
         self.bot.worker.clear_voice_client()
         await ctx.send("Disconnected.")
 
-    @commands.command()
+    @commands.command(help="Reprend la lecture de la queue")
     async def resume(self, ctx):
         voice_client = await self.prepare_to_play(ctx)
 
@@ -127,6 +127,20 @@ class Controls(commands.Cog):
             return
 
         self.bot.worker.set_voice_client(voice_client)
+
+    @commands.command(help="Vide la queue")
+    async def clear(self, ctx):
+        self.bot.queue_manager.clear_queue()
+        await ctx.send("Queue cleared.")
+
+    @commands.command(help="affiche la liste des commandes")
+    async def h(self, ctx):
+        message = "\n".join(
+            f"!{command.name} - {command.help}"
+            for command in self.bot.commands
+        )      
+
+        await ctx.send(message)
 
 
 if not TOKEN:
