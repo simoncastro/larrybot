@@ -5,6 +5,7 @@ class Worker():
         self.queue_manager = queue_manager
         self.player = player
         self.voice_client = None
+        self.text_channel = None
         self.voice_ready = asyncio.Event()
 
     async def play_songs(self):
@@ -15,6 +16,9 @@ class Worker():
             song = await self.queue_manager.next_song()
             print("WORKER: got song:", song.title)
 
+            await self.text_channel.send(
+                f"▶ Now playing: **{song.title}**"
+            )
             await self.player.play_song(song, self.voice_client)
 
     def set_voice_client(self, voice_client):
