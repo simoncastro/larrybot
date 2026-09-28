@@ -5,7 +5,7 @@ import yt_dlp
 
 
 YDL_OPTIONS = {
-    "quiet": True,
+    #"quiet": True,
     "format": "bestaudio/best",
     "cookiefile": "cookies.txt",
     "noplaylist": True,
@@ -52,5 +52,8 @@ class Player():
         loop = asyncio.get_running_loop()
         #yt-dlp is blocking, so don't run it directly on Discord's event loop
         info = await loop.run_in_executor(None, extract)
+
+        print("PLAYER FORMAT:", info.get("format_id"))
+        print("PLAYER URL:", info.get("url"))
 
         return info.get("url")
