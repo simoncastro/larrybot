@@ -20,6 +20,12 @@ SONG_YDL_OPTIONS = {
 PLAYLIST_YDL_OPTIONS = {
     **YDL_OPTIONS,
     "extract_flat": True,
+    "playlistend": 50,
+    "extractor_args": {
+        "youtubetab": {
+            "skip": ["authcheck"]
+        }
+    },
 }
 
 class Type(Enum):
